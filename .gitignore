@@ -1,0 +1,6 @@
+node-consumer/node_modules/
+node-consumer/package-lock.json
+KafkaWithCapExample/.vs/
+KafkaWithCapExample/bin/
+KafkaWithCapExample/obj/
+KafkaWithCapExample/appsettings.Development.json
