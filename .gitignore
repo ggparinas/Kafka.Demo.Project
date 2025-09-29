@@ -4,3 +4,7 @@ KafkaWithCapExample/.vs/
 KafkaWithCapExample/bin/
 KafkaWithCapExample/obj/
 KafkaWithCapExample/appsettings.Development.json
+KafkaConsumerSvc/.vs/
+KafkaConsumerSvc/bin/
+KafkaConsumerSvc/obj/
+KafkaConsumerSvc/appsettings.Development.json
