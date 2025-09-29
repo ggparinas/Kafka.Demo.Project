@@ -1,11 +1,23 @@
+using KafkaConsumerSvc;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+var kafkaServers = builder.Configuration["KafkaBootstrapServers"] ?? "localhost:9092";
+
+builder.Services.AddScoped<MessageSubscriber>();
+
+builder.Services.AddCap(options =>
+{
+    options.UseInMemoryStorage(); // We can also use DB storage, but I haven't explored that yet. -Gab
+    options.UseKafka(kafkaServers); // This is important to be able to make use of kafka
+    options.UseDashboard(); // Optional.
+});
 
 var app = builder.Build();
 
