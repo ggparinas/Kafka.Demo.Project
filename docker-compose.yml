@@ -36,6 +36,21 @@ services:
     depends_on:
       - kafka
 
+  kafka-consumer-svc:
+    build: ./KafkaConsumerSvc
+    container_name: kafka-consumer-svc
+    # This policy will restart the container if it fails (e.g., if Kafka isn't ready yet)
+    restart: always 
+    ports:
+      - "5176:5176"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5176
+      # All services will use the INTERNAL listener to talk to the broker
+      - KafkaBootstrapServers=kafka:9093 
+    depends_on:
+      - kafka
+
   node-consumer:
     build: ./node-consumer
     container_name: nodejs-kafka-consumer

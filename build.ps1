@@ -10,4 +10,4 @@ Write-Host "Starting services in detached mode..."
 docker-compose up -d
 
 Write-Host "Following logs for specified services. Press Ctrl+C to exit."
-docker-compose logs -f -t kafka kafka-api node-consumer
+docker-compose logs -f -t kafka kafka-api kafka-consumer-svc node-consumer
