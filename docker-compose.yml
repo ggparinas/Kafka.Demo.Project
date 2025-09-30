@@ -20,6 +20,11 @@ services:
       - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://localhost:9092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+    healthcheck:
+      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9093", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka-api:
     build: ./KafkaWithCapExample
@@ -34,7 +39,8 @@ services:
       # All services will use the INTERNAL listener to talk to the broker
       - KafkaBootstrapServers=kafka:9093 
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
 
   kafka-consumer-svc:
     build: ./KafkaConsumerSvc
@@ -49,7 +55,8 @@ services:
       # All services will use the INTERNAL listener to talk to the broker
       - KafkaBootstrapServers=kafka:9093 
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
 
   node-consumer:
     build: ./node-consumer
@@ -60,4 +67,5 @@ services:
       # All services will use the INTERNAL listener to talk to the broker
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9093 
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy

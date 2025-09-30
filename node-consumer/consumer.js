@@ -23,7 +23,7 @@ const run = async () => {
   // 3. Run the consumer to start fetching messages
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-      console.log("Message Received! \n\n\n");
+      console.log("Message Received!");
       console.log({
         topic,
         partition,

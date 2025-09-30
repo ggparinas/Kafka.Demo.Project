@@ -14,4 +14,4 @@ RUN npm install
 COPY . .
 
 # Your app's start-up command
-CMD ["node", "consumer.js"]
+CMD ["sh", "-c", "node consumer.js 2>/dev/null"]
