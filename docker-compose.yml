@@ -1,27 +1,29 @@
 services:
   kafka:
-    image: bitnami/kafka:latest
+    image: confluentinc/cp-kafka:latest
     ports:
       - "9092:9092"
     environment:
-      # === KRaft Configuration ===
-      - KAFKA_CFG_PROCESS_ROLES=broker,controller
-      - KAFKA_CFG_NODE_ID=1
-      # The controller needs its own listener. We use port 9094 for this.
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
+      # === KRaft Configuration (Confluent Syntax) ===
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_NODE_ID=1
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
+      - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
+      - KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
       
-      # === Listener Configuration ===
-      # Define three listeners:
-      # 1. CONTROLLER for KRaft consensus
-      # 2. INTERNAL for container-to-container communication
-      # 3. EXTERNAL for communication from the host machine
-      - KAFKA_CFG_LISTENERS=INTERNAL://:9093,EXTERNAL://:9092,CONTROLLER://:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://localhost:9092
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      # === Listener Configuration (Confluent Syntax) ===
+      - KAFKA_LISTENERS=INTERNAL://:9093,EXTERNAL://:9092,CONTROLLER://:9094
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      
+      # === Required for single-broker KRaft setups ===
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9093", "--list"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --list"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,6 +54,22 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5176
+      # All services will use the INTERNAL listener to talk to the broker
+      - KafkaBootstrapServers=kafka:9093 
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  secondary-consumer-svc:
+    build: ./SecondaryConsumerSvc
+    container_name: secondary-consumer-svc
+    # This policy will restart the container if it fails (e.g., if Kafka isn't ready yet)
+    restart: always 
+    ports:
+      - "5083:5083"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5083
       # All services will use the INTERNAL listener to talk to the broker
       - KafkaBootstrapServers=kafka:9093 
     depends_on:

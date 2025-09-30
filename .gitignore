@@ -8,3 +8,7 @@ KafkaConsumerSvc/.vs/
 KafkaConsumerSvc/bin/
 KafkaConsumerSvc/obj/
 KafkaConsumerSvc/appsettings.Development.json
+SecondaryConsumerSvc/.vs/
+SecondaryConsumerSvc/bin/
+SecondaryConsumerSvc/obj/
+SecondaryConsumerSvc/appsettings.Development.json
