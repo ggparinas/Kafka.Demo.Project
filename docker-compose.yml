@@ -1,10 +1,20 @@
+# DEV-NOTE: This file defines and configures all the services that make up our Kafka demo.
+# Docker Compose uses this file to create and run all our applications in isolated containers,
+# making the entire demo portable and easy to start with a single command (`docker-compose up`).
+
 services:
+  # DEV-NOTE: This service defines our Apache Kafka broker. It's the central message bus
+  # for our entire system. We are using a pre-built Docker image from Confluent.
   kafka:
     image: confluentinc/cp-kafka:latest
     ports:
+      # DEV-NOTE: We expose port 9092. This allows applications outside of Docker (like a local GUI tool)
+      # to connect to Kafka. Our services inside Docker will use a different, internal port.
       - "9092:9092"
     environment:
       # === KRaft Configuration (Confluent Syntax) ===
+      # DEV-NOTE: These settings configure Kafka to run in KRaft mode, which is a newer,
+      # Zookeeper-less setup. It's simpler to run for a demo.
       - KAFKA_PROCESS_ROLES=broker,controller
       - KAFKA_NODE_ID=1
       - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
@@ -12,6 +22,9 @@ services:
       - KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
       
       # === Listener Configuration (Confluent Syntax) ===
+      # DEV-NOTE: This is a critical networking setup for Kafka in Docker.
+      # EXTERNAL://:9092 is for connections from outside the Docker network (our local machine).
+      # INTERNAL://:9093 is for connections between containers within the Docker network.
       - KAFKA_LISTENERS=INTERNAL://:9093,EXTERNAL://:9092,CONTROLLER://:9094
       - KAFKA_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://localhost:9092
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
@@ -19,31 +32,54 @@ services:
       - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       
       # === Required for single-broker KRaft setups ===
+      # DEV-NOTE: These settings are necessary because we are running only one Kafka broker.
+      # They tell Kafka not to worry about replicating data to other brokers that don't exist.
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
     healthcheck:
+      # DEV-NOTE: The healthcheck ensures that other services don't start until Kafka is fully ready
+      # and accepting connections. It works by trying to list the topics.
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --list"]
       interval: 10s
       timeout: 5s
       retries: 5
+      
+  # DEV-NOTE: This is our service for the Kafka Web UI.
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      # DEV-NOTE: We'll access this UI on port 8081 from our browser.
+      - "8081:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      # DEV-NOTE: These environment variables configure the UI to connect to our Kafka container.
+      KAFKA_CLUSTERS_0_NAME: "Local Docker Kafka"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9093" # Must use the internal listener
+      DYNAMIC_CONFIG_ENABLED: "true"
 
+  # DEV-NOTE: This service is our C# API and message Producer.
   kafka-api:
-    build: ./KafkaWithCapExample
+    build: ./KafkaWithCapExample # DEV-NOTE: Docker will build an image from the code in this directory.
     container_name: kafka-with-cap-example
-    # This policy will restart the container if it fails (e.g., if Kafka isn't ready yet)
-    restart: always 
+    restart: always # DEV-NOTE: If this container crashes, Docker will automatically restart it.
     ports:
       - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
-      # All services will use the INTERNAL listener to talk to the broker
+      # DEV-NOTE: We set the bootstrap server to `kafka:9093`, which is the INTERNAL listener of the Kafka service.
+      # Docker's internal DNS resolves 'kafka' to the correct container IP.
       - KafkaBootstrapServers=kafka:9093 
     depends_on:
       kafka:
+        # DEV-NOTE: This is crucial. It tells Docker to wait until the Kafka healthcheck passes before starting this service.
         condition: service_healthy
 
+  # DEV-NOTE: This service is our first C# Consumer.
   kafka-consumer-svc:
     build: ./KafkaConsumerSvc
     container_name: kafka-consumer-svc
@@ -60,6 +96,7 @@ services:
       kafka:
         condition: service_healthy
 
+  # DEV-NOTE: This service is our second C# Consumer.
   secondary-consumer-svc:
     build: ./SecondaryConsumerSvc
     container_name: secondary-consumer-svc
@@ -76,13 +113,14 @@ services:
       kafka:
         condition: service_healthy
 
+  # DEV-NOTE: This service is our Node.js Consumer.
   node-consumer:
     build: ./node-consumer
     container_name: nodejs-kafka-consumer
     # This policy will restart the container if it fails
     restart: always 
     environment:
-      # All services will use the INTERNAL listener to talk to the broker
+      # DEV-NOTE: We pass the internal Kafka address to the Node.js app via an environment variable.
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9093 
     depends_on:
       kafka:
